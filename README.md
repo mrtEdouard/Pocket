@@ -69,3 +69,15 @@ l’URL utilisée par le backend dans `backend/src/database.ts`.
 ```bash
 npm run build
 ```
+
+## Jeu d'essai local
+
+Après avoir importé `docs/pocket.sql`, le fichier `docs/seed.sql` ajoute un
+utilisateur de démonstration et deux activités sans créer de doublons :
+
+```bash
+docker compose exec -T db \
+  psql -U pocket -d pocket < docs/seed.sql
+```
+
+Les données peuvent ensuite être lues avec `GET /activities`.

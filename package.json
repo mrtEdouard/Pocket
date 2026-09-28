@@ -9,5 +9,9 @@
     "dev:api": "npm run dev --workspace backend",
     "dev:web": "npm run dev --workspace frontend",
     "build": "npm run build --workspace backend && npm run build --workspace frontend"
+  },
+  "dependencies": {
+    "backend": "^0.0.0",
+    "zod": "^4.6.5"
   }
 }
