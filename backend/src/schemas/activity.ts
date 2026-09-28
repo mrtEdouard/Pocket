@@ -6,7 +6,9 @@ export const activityIdParamsSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
-
+export const activityOwnerIdParamsSchema = z.object({
+  ownerId: z.coerce.number().int().positive(),
+});
 
 export const createActivityBodySchema = z
   .strictObject({
@@ -31,7 +33,7 @@ export const createActivityBodySchema = z
     // durée d'acti positive 
     durationMinutes: z.number().int().positive(),
 
-    
+
     locationType: z.enum(["indoor", "outdoor", "both"]),
     energyLevel: z.enum(["low", "medium", "high"]),
 

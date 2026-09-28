@@ -17,9 +17,17 @@ body {
 }
 
 .app {
-  width: min(680px, calc(100% - 40px));
+  width: min(960px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 18vh 0 64px;
+  padding: 32px 0 64px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
 .eyebrow {
@@ -35,16 +43,45 @@ h1 {
   margin: 0;
   color: #18231f;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2.8rem, 8vw, 5rem);
+  font-size: clamp(2.5rem, 12vw, 5rem);
   font-weight: 500;
   letter-spacing: -0.05em;
   line-height: 1;
 }
 
-.app > p:last-child {
-  max-width: 560px;
-  margin: 24px 0 0;
-  color: #607068;
-  font-size: 1.08rem;
-  line-height: 1.7;
+button {
+  border: 0;
+  border-radius: 999px;
+  background: #263d32;
+  color: white;
+  cursor: pointer;
+  padding: 10px 16px;
+}
+
+h2 {
+  font-size: 1rem;
+}
+
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  background: #18231f;
+  color: #e7eee9;
+  padding: 16px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.error {
+  border-radius: 12px;
+  background: #f7ded8;
+  color: #842f24;
+  padding: 14px;
+}
+
+@media (min-width: 768px) {
+  .app {
+    padding-top: 64px;
+  }
 }
