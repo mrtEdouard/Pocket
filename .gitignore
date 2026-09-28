@@ -1,0 +1,19 @@
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+dist/
+build/
+*.egg-info/
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Frontend dependencies/builds
+node_modules/
+.next/
