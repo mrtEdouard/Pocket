@@ -5,3 +5,10 @@ export interface User {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface PublicUser {
+  id: string;
+  name: string;
+  createdAt: string;
+  activityCount: number;
+}

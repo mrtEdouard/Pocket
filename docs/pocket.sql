@@ -134,6 +134,7 @@ CREATE TABLE activities (
 
     location_type VARCHAR(20) NOT NULL,
     energy_level VARCHAR(20) NOT NULL,
+    image_url TEXT,
 
     is_public BOOLEAN NOT NULL DEFAULT FALSE,
 
@@ -255,6 +256,54 @@ CREATE TABLE activity_equipment (
 
     CONSTRAINT chk_equipment_quantity
         CHECK (quantity > 0)
+);
+
+
+-- =========================================================
+-- ACTIVITES ENREGISTREES DANS UNE VALISE
+-- =========================================================
+
+CREATE TABLE saved_activities (
+    user_id BIGINT NOT NULL,
+    activity_id BIGINT NOT NULL,
+    saved_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (user_id, activity_id),
+
+    CONSTRAINT fk_saved_activities_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_saved_activities_activity
+        FOREIGN KEY (activity_id)
+        REFERENCES activities(id)
+        ON DELETE CASCADE
+);
+
+
+-- =========================================================
+-- COMMENTAIRES DU FIL
+-- =========================================================
+
+CREATE TABLE comments (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    author_id BIGINT NOT NULL,
+    target_type VARCHAR(20) NOT NULL,
+    target_id VARCHAR(100) NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_comments_author
+        FOREIGN KEY (author_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT chk_comments_target_type
+        CHECK (target_type IN ('activity', 'announcement')),
+
+    CONSTRAINT chk_comments_content
+        CHECK (char_length(trim(content)) BETWEEN 1 AND 500)
 );
 
 

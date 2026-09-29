@@ -5,6 +5,7 @@ import {
   verifyAccessToken,
 } from "../services/token.js";
 
+// Pour vérifier si un utilisateur est connecté, sinon on le tej
 export async function authenticate(
   request: Request,
   response: Response,

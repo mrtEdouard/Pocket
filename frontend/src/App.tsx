@@ -1,13 +1,27 @@
 import { useEffect, useState, type FormEvent } from "react";
 
+import {
+  getMyActivities,
+  getPublicActivities,
+  saveActivity,
+} from "./api/activities";
 import { getCurrentUser, login, logout, register } from "./api/auth";
-import type { User } from "./types/user";
+import { getPublicProfile, getRecentUsers } from "./api/users";
+import { ActivityModal } from "./components/ActivityModal";
+import { CommentsSection } from "./components/CommentsSection";
+import type { Activity } from "./types/activity";
+import type { PublicUser, User } from "./types/user";
 
-type PageId = "home" | "stays" | "activities" | "planning" | "profile";
+type MainPageId = "home" | "stays" | "activities" | "planning" | "profile";
+type PageId =
+  | MainPageId
+  | "activityDetail"
+  | "announcementDetail"
+  | "publicProfile";
 type AuthMode = "login" | "register";
 
 interface NavigationItem {
-  id: PageId;
+  id: MainPageId;
   label: string;
 }
 
@@ -22,7 +36,6 @@ interface HomePost {
   initials: string;
   meta: string;
   stats: string;
-  target: PageId;
   title: string;
   tone: "activity" | "recruitment" | "stay";
 }
@@ -52,6 +65,18 @@ const navigationItems: NavigationItem[] = [
   { id: "profile", label: "Profil" },
 ];
 
+const locationLabels: Record<Activity["locationType"], string> = {
+  indoor: "Intérieur",
+  outdoor: "Extérieur",
+  both: "Intérieur / extérieur",
+};
+
+const energyLabels: Record<Activity["energyLevel"], string> = {
+  low: "Calme",
+  medium: "Modérée",
+  high: "Dynamique",
+};
+
 const homePosts: HomePost[] = [
   {
     id: 1,
@@ -66,7 +91,6 @@ const homePosts: HomePost[] = [
     body: "Testé hier avec 24 enfants. Prévoir plus de ficelle.",
     facts: ["8–10 ans", "1 h", "Extérieur"],
     stats: "28 favoris · 5 commentaires",
-    target: "activities",
   },
   {
     id: 2,
@@ -81,7 +105,6 @@ const homePosts: HomePost[] = [
     body: "Du 4 au 16 août avec un groupe de 12 à 17 ans. Logement sur place.",
     facts: ["12–17 ans", "4–16 août", "Vercors"],
     stats: "12 intéressés · 3 réponses",
-    target: "stays",
   },
   {
     id: 3,
@@ -96,11 +119,10 @@ const homePosts: HomePost[] = [
     body: "L'équipe est complète. Il reste deux veillées à caler.",
     facts: ["8–12 ans", "8–21 août", "8 membres"],
     stats: "34 suivis · 6 idées",
-    target: "stays",
   },
 ];
 
-function NavigationIcon({ page }: { page: PageId }) {
+function NavigationIcon({ page }: { page: MainPageId }) {
   const commonProps = {
     viewBox: "0 0 32 32",
     fill: "none",
@@ -166,6 +188,25 @@ export default function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
   const [demoPeople, setDemoPeople] = useState<DemoPerson[]>([]);
+  const [publicActivities, setPublicActivities] = useState<Activity[]>([]);
+  const [myActivities, setMyActivities] = useState<Activity[]>([]);
+  const [isLoadingMyActivities, setIsLoadingMyActivities] = useState(false);
+  const [activitiesError, setActivitiesError] = useState<string | null>(null);
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [recentUsers, setRecentUsers] = useState<PublicUser[]>([]);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<HomePost | null>(
+    null,
+  );
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<{
+    profile: PublicUser;
+    activities: Activity[];
+  } | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [savingActivityIds, setSavingActivityIds] = useState<string[]>([]);
 
   useEffect(() => {
     let effectIsActive = true;
@@ -228,6 +269,103 @@ export default function App() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    getRecentUsers(controller.signal)
+      .then(setRecentUsers)
+      .catch(() => {
+        if (!controller.signal.aborted) setRecentUsers([]);
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProfileId) return;
+
+    const controller = new AbortController();
+    setSelectedProfile(null);
+    setProfileError(null);
+    setIsLoadingProfile(true);
+
+    getPublicProfile(selectedProfileId, controller.signal)
+      .then(setSelectedProfile)
+      .catch((caughtError: unknown) => {
+        if (!controller.signal.aborted) {
+          setProfileError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Impossible de charger ce profil.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingProfile(false);
+      });
+
+    return () => controller.abort();
+  }, [selectedProfileId]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadPublicActivities(): Promise<void> {
+      try {
+        const activities = await getPublicActivities(controller.signal);
+        setPublicActivities(activities);
+      } catch (caughtError) {
+        if (!controller.signal.aborted) {
+          setActivitiesError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Impossible de charger les activités.",
+          );
+        }
+      }
+    }
+
+    void loadPublicActivities();
+
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (isCheckingSession) return;
+
+    if (!user) {
+      setMyActivities([]);
+      setIsActivityModalOpen(false);
+      setEditingActivity(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsLoadingMyActivities(true);
+    setActivitiesError(null);
+
+    async function loadMyActivities(): Promise<void> {
+      try {
+        const activities = await getMyActivities(controller.signal);
+        setMyActivities(activities);
+      } catch (caughtError) {
+        if (!controller.signal.aborted) {
+          setActivitiesError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Impossible d’ouvrir ta valise à activités.",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsLoadingMyActivities(false);
+      }
+    }
+
+    void loadMyActivities();
+
+    return () => controller.abort();
+  }, [isCheckingSession, user]);
+
   async function handleAuthSubmit(
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> {
@@ -243,6 +381,20 @@ export default function App() {
 
       setUser(authenticatedUser);
       setPassword("");
+
+      if (authMode === "register") {
+        setRecentUsers((currentUsers) => [
+          {
+            id: authenticatedUser.id,
+            name: authenticatedUser.name,
+            createdAt: authenticatedUser.createdAt,
+            activityCount: 0,
+          },
+          ...currentUsers.filter(
+            (currentUser) => currentUser.id !== authenticatedUser.id,
+          ),
+        ].slice(0, 3));
+      }
     } catch (caughtError) {
       setAuthError(
         caughtError instanceof Error
@@ -279,6 +431,59 @@ export default function App() {
     setPassword("");
   }
 
+  function openActivity(activity: Activity): void {
+    setSelectedActivity(activity);
+    setActivePage("activityDetail");
+  }
+
+  function openAnnouncement(post: HomePost): void {
+    setSelectedAnnouncement(post);
+    setActivePage("announcementDetail");
+  }
+
+  function openPublicProfile(userId: string): void {
+    setSelectedProfileId(userId);
+    setActivePage("publicProfile");
+  }
+
+  async function addActivityToSuitcase(activity: Activity): Promise<void> {
+    if (!user) {
+      setActivePage("profile");
+      return;
+    }
+
+    if (
+      myActivities.some((savedActivity) => savedActivity.id === activity.id) ||
+      savingActivityIds.includes(activity.id)
+    ) {
+      return;
+    }
+
+    setActivitiesError(null);
+    setSavingActivityIds((ids) => [...ids, activity.id]);
+
+    try {
+      const result = await saveActivity(activity.id);
+      setMyActivities((currentActivities) =>
+        currentActivities.some(
+          (currentActivity) => currentActivity.id === result.activity.id,
+        )
+          ? currentActivities
+          : [result.activity, ...currentActivities],
+      );
+    } catch (caughtError) {
+      setActivitiesError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Impossible d’ajouter cette activité à ta valise.",
+      );
+    } finally {
+      setSavingActivityIds((ids) =>
+        ids.filter((activityId) => activityId !== activity.id),
+      );
+    }
+  }
+
   function renderHome() {
     return (
       <section className="community-home">
@@ -295,6 +500,93 @@ export default function App() {
                 </button>
               )}
             </header>
+
+            {publicActivities.map((activity) => (
+              <article className="feed-entry" key={`activity-${activity.id}`}>
+                <header className="feed-entry-header">
+                  <button
+                    className="profile-avatar avatar-activity"
+                    type="button"
+                    aria-label={`Voir le profil de ${activity.ownerName}`}
+                    onClick={() => openPublicProfile(activity.ownerId)}
+                  >
+                    {activity.ownerName.charAt(0).toUpperCase()}
+                  </button>
+                  <div className="feed-author">
+                    <button
+                      type="button"
+                      onClick={() => openPublicProfile(activity.ownerId)}
+                    >
+                      {activity.ownerName}
+                    </button>
+                    <span>vient d’ajouter une activité</span>
+                  </div>
+                  <span className="post-category">Activité</span>
+                </header>
+
+                {activity.imageUrl ? (
+                  <img
+                    className="post-image"
+                    src={activity.imageUrl}
+                    alt={`Illustration de ${activity.title}`}
+                    loading="lazy"
+                  />
+                ) : (
+                  <div
+                    className={`activity-feed-cover energy-${activity.energyLevel}`}
+                    aria-hidden="true"
+                  >
+                    <span>{locationLabels[activity.locationType]}</span>
+                    <svg viewBox="0 0 120 72" fill="none">
+                      <path d="M17 57 43 25l18 21 14-17 28 28H17Z" />
+                      <circle cx="87" cy="17" r="8" />
+                      <path d="M11 62h98" />
+                    </svg>
+                    <strong>{activity.durationMinutes} min</strong>
+                  </div>
+                )}
+
+                <div className="feed-entry-content">
+                  <h2>{activity.title}</h2>
+                  <p>{activity.description}</p>
+                  <ul className="post-facts" aria-label="Informations principales">
+                    <li>
+                      {activity.minAge}–{activity.maxAge} ans
+                    </li>
+                    <li>
+                      {activity.minChildren}–{activity.maxChildren} enfants
+                    </li>
+                    <li>{energyLabels[activity.energyLevel]}</li>
+                  </ul>
+                </div>
+
+                <footer className="feed-entry-footer">
+                  <span>Nouvelle activité publique</span>
+                  <div className="feed-entry-actions">
+                    <button
+                      type="button"
+                      disabled={
+                        myActivities.some(
+                          (savedActivity) => savedActivity.id === activity.id,
+                        ) || savingActivityIds.includes(activity.id)
+                      }
+                      onClick={() => void addActivityToSuitcase(activity)}
+                    >
+                      {myActivities.some(
+                        (savedActivity) => savedActivity.id === activity.id,
+                      )
+                        ? "Dans ma valise"
+                        : savingActivityIds.includes(activity.id)
+                          ? "Ajout…"
+                          : "+ Valise"}
+                    </button>
+                    <button type="button" onClick={() => openActivity(activity)}>
+                      Voir la fiche
+                    </button>
+                  </div>
+                </footer>
+              </article>
+            ))}
 
             {homePosts.map((post, index) => (
               <article className="feed-entry" key={post.id}>
@@ -332,8 +624,8 @@ export default function App() {
 
                 <footer className="feed-entry-footer">
                   <span>{post.stats}</span>
-                  <button type="button" onClick={() => setActivePage(post.target)}>
-                    Voir{post.tone === "activity" ? " l'activité" : ""}
+                  <button type="button" onClick={() => openAnnouncement(post)}>
+                    Voir la publication
                   </button>
                 </footer>
               </article>
@@ -370,9 +662,32 @@ export default function App() {
                 <h2>Nouveaux profils</h2>
               </header>
               <ul className="member-list">
-                <li><span className="member-initials">{demoPeople[3] ? <img src={demoPeople[3].picture} alt="" /> : "MB"}</span><div><strong>{demoPeople[3]?.name ?? "Manon"}</strong><span>Animatrice · Toulouse</span></div><small>BAFA</small></li>
-                <li><span className="member-initials">{demoPeople[4] ? <img src={demoPeople[4].picture} alt="" /> : "YK"}</span><div><strong>{demoPeople[4]?.name ?? "Yanis"}</strong><span>Animateur · Lille</span></div><small>SB</small></li>
-                <li><span className="member-initials">{demoPeople[5] ? <img src={demoPeople[5].picture} alt="" /> : "CR"}</span><div><strong>{demoPeople[5]?.name ?? "Chloé"}</strong><span>Directrice · Rennes</span></div><small>BAFD</small></li>
+                {recentUsers.map((recentUser) => (
+                  <li key={recentUser.id}>
+                    <button
+                      className="member-initials"
+                      type="button"
+                      aria-label={`Voir le profil de ${recentUser.name}`}
+                      onClick={() => openPublicProfile(recentUser.id)}
+                    >
+                      {recentUser.name.charAt(0).toUpperCase()}
+                    </button>
+                    <div>
+                      <button
+                        className="member-name"
+                        type="button"
+                        onClick={() => openPublicProfile(recentUser.id)}
+                      >
+                        {recentUser.name}
+                      </button>
+                      <span>Vient de rejoindre Pocket</span>
+                    </div>
+                    <small>
+                      {recentUser.activityCount} activité
+                      {recentUser.activityCount > 1 ? "s" : ""}
+                    </small>
+                  </li>
+                ))}
               </ul>
               <button className="sidebar-action" type="button" onClick={() => setActivePage("profile")}>
                 Rejoindre la communauté
@@ -389,7 +704,399 @@ export default function App() {
   }
 
   function renderActivities() {
-    return null;
+    if (isCheckingSession) {
+      return (
+        <p className="session-check" role="status">
+          Vérification de la session…
+        </p>
+      );
+    }
+
+    if (!user) {
+      return (
+        <section className="activity-access" aria-labelledby="activity-access-title">
+          <p>Création d’activité</p>
+          <h2 id="activity-access-title">Connecte-toi pour ajouter une activité.</h2>
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => setActivePage("profile")}
+          >
+            Aller à la connexion
+          </button>
+        </section>
+      );
+    }
+
+    return (
+      <section className="activity-suitcase" aria-label="Ma valise à activités">
+        <header className="suitcase-toolbar">
+          <div className="suitcase-name">
+            <span className="suitcase-handle" aria-hidden="true" />
+            <div>
+              <strong>Ma valise</strong>
+              <span>
+                {myActivities.length} activité{myActivities.length > 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
+
+          <button
+            className="add-activity-button"
+            type="button"
+            aria-label="Ajouter une activité"
+            onClick={() => {
+              setEditingActivity(null);
+              setIsActivityModalOpen(true);
+            }}
+          >
+            +
+          </button>
+        </header>
+
+        {activitiesError && (
+          <p className="suitcase-message is-error" role="alert">
+            {activitiesError}
+          </p>
+        )}
+
+        {isLoadingMyActivities ? (
+          <p className="suitcase-message" role="status">
+            Ouverture de la valise…
+          </p>
+        ) : myActivities.length === 0 ? (
+          <div className="empty-suitcase">
+            <span aria-hidden="true">+</span>
+            <p>Ta première fiche d’activité viendra se ranger ici.</p>
+          </div>
+        ) : (
+          <ul className="activity-card-grid">
+            {myActivities.map((activity) => (
+              <li
+                className={`activity-card energy-${activity.energyLevel}`}
+                key={activity.id}
+              >
+                <header>
+                  <div>
+                    <span>{activity.isPublic ? "Publique" : "Privée"}</span>
+                    <small>{energyLabels[activity.energyLevel]}</small>
+                  </div>
+                  {activity.isOwned && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingActivity(activity);
+                        setIsActivityModalOpen(true);
+                      }}
+                    >
+                      Modifier
+                    </button>
+                  )}
+                </header>
+                {activity.imageUrl && (
+                  <img
+                    className="activity-card-image"
+                    src={activity.imageUrl}
+                    alt=""
+                    loading="lazy"
+                  />
+                )}
+                <h2>{activity.title}</h2>
+                <p>{activity.description}</p>
+                <footer>
+                  <div>
+                    <span>
+                      {activity.minAge}–{activity.maxAge} ans
+                    </span>
+                    <span>{activity.durationMinutes} min</span>
+                    <span>{locationLabels[activity.locationType]}</span>
+                  </div>
+                  <button type="button" onClick={() => openActivity(activity)}>
+                    Voir
+                  </button>
+                </footer>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {isActivityModalOpen && (
+          <ActivityModal
+            activity={editingActivity}
+            onClose={() => {
+              setIsActivityModalOpen(false);
+              setEditingActivity(null);
+            }}
+            onSaved={(savedActivity) => {
+              const wasCreating = editingActivity === null;
+
+              setMyActivities((currentActivities) => {
+                const alreadyExists = currentActivities.some(
+                  (activity) => activity.id === savedActivity.id,
+                );
+
+                return alreadyExists
+                  ? currentActivities.map((activity) =>
+                      activity.id === savedActivity.id ? savedActivity : activity,
+                    )
+                  : [savedActivity, ...currentActivities];
+              });
+
+              setPublicActivities((currentActivities) => {
+                const withoutSavedActivity = currentActivities.filter(
+                  (activity) => activity.id !== savedActivity.id,
+                );
+
+                return savedActivity.isPublic
+                  ? [savedActivity, ...withoutSavedActivity]
+                  : withoutSavedActivity;
+              });
+
+              setIsActivityModalOpen(false);
+              setEditingActivity(null);
+
+              if (wasCreating && savedActivity.isPublic) {
+                setActivePage("home");
+              }
+            }}
+          />
+        )}
+      </section>
+    );
+  }
+
+  function renderActivityDetail() {
+    if (!selectedActivity) return null;
+
+    const activityIsSaved = myActivities.some(
+      (activity) => activity.id === selectedActivity.id,
+    );
+    const activityIsSaving = savingActivityIds.includes(selectedActivity.id);
+
+    return (
+      <section className="detail-page">
+        <button className="detail-back" type="button" onClick={() => setActivePage("home")}>
+          ← Retour au fil
+        </button>
+
+        <article className="detail-card">
+          <header className="detail-author">
+            <button
+              className="profile-avatar avatar-activity"
+              type="button"
+              onClick={() => openPublicProfile(selectedActivity.ownerId)}
+            >
+              {selectedActivity.ownerName.charAt(0).toUpperCase()}
+            </button>
+            <div>
+              <button
+                type="button"
+                onClick={() => openPublicProfile(selectedActivity.ownerId)}
+              >
+                {selectedActivity.ownerName}
+              </button>
+              <span>Créateur de l’activité</span>
+            </div>
+            <small>Activité</small>
+          </header>
+
+          {selectedActivity.imageUrl ? (
+            <img
+              className="detail-cover"
+              src={selectedActivity.imageUrl}
+              alt={`Illustration de ${selectedActivity.title}`}
+            />
+          ) : (
+            <div
+              className={`activity-feed-cover detail-cover energy-${selectedActivity.energyLevel}`}
+              aria-hidden="true"
+            >
+              <span>{locationLabels[selectedActivity.locationType]}</span>
+              <svg viewBox="0 0 120 72" fill="none">
+                <path d="M17 57 43 25l18 21 14-17 28 28H17Z" />
+                <circle cx="87" cy="17" r="8" />
+                <path d="M11 62h98" />
+              </svg>
+              <strong>{selectedActivity.durationMinutes} min</strong>
+            </div>
+          )}
+
+          <div className="detail-content">
+            <h1>{selectedActivity.title}</h1>
+            <p>{selectedActivity.description}</p>
+            <dl className="activity-details-list">
+              <div>
+                <dt>Âges</dt>
+                <dd>
+                  {selectedActivity.minAge}–{selectedActivity.maxAge} ans
+                </dd>
+              </div>
+              <div>
+                <dt>Groupe</dt>
+                <dd>
+                  {selectedActivity.minChildren}–{selectedActivity.maxChildren} enfants
+                </dd>
+              </div>
+              <div>
+                <dt>Durée</dt>
+                <dd>{selectedActivity.durationMinutes} min</dd>
+              </div>
+              <div>
+                <dt>Lieu</dt>
+                <dd>{locationLabels[selectedActivity.locationType]}</dd>
+              </div>
+            </dl>
+
+            <button
+              className="detail-save-button"
+              type="button"
+              disabled={activityIsSaved || activityIsSaving}
+              onClick={() => void addActivityToSuitcase(selectedActivity)}
+            >
+              {activityIsSaved
+                ? "Déjà dans ma valise"
+                : activityIsSaving
+                  ? "Ajout…"
+                  : "+ Ajouter à ma valise"}
+            </button>
+          </div>
+        </article>
+
+        {selectedActivity.isPublic ? (
+          <CommentsSection
+            currentUser={user}
+            targetId={selectedActivity.id}
+            targetType="activity"
+            onAuthorClick={openPublicProfile}
+            onLoginRequired={() => setActivePage("profile")}
+          />
+        ) : (
+          <p className="detail-private-note">
+            Les commentaires sont disponibles lorsque l’activité est publique.
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  function renderAnnouncementDetail() {
+    if (!selectedAnnouncement) return null;
+
+    return (
+      <section className="detail-page">
+        <button className="detail-back" type="button" onClick={() => setActivePage("home")}>
+          ← Retour au fil
+        </button>
+
+        <article className="detail-card">
+          <header className="detail-author">
+            <span
+              className={`profile-avatar avatar-${selectedAnnouncement.tone}`}
+              aria-hidden="true"
+            >
+              {selectedAnnouncement.initials}
+            </span>
+            <div>
+              <strong>{selectedAnnouncement.author}</strong>
+              <span>{selectedAnnouncement.meta}</span>
+            </div>
+            <small>{selectedAnnouncement.category}</small>
+          </header>
+
+          <img
+            className="detail-cover"
+            src={selectedAnnouncement.image}
+            alt={selectedAnnouncement.imageAlt}
+          />
+
+          <div className="detail-content">
+            <h1>{selectedAnnouncement.title}</h1>
+            <p>{selectedAnnouncement.body}</p>
+            <ul className="post-facts" aria-label="Informations principales">
+              {selectedAnnouncement.facts.map((fact) => (
+                <li key={fact}>{fact}</li>
+              ))}
+            </ul>
+          </div>
+        </article>
+
+        <CommentsSection
+          currentUser={user}
+          targetId={`feed-${selectedAnnouncement.id}`}
+          targetType="announcement"
+          onAuthorClick={openPublicProfile}
+          onLoginRequired={() => setActivePage("profile")}
+        />
+      </section>
+    );
+  }
+
+  function renderPublicProfile() {
+    if (isLoadingProfile) {
+      return <p className="session-check">Chargement du profil…</p>;
+    }
+
+    if (profileError || !selectedProfile) {
+      return (
+        <section className="public-profile-error">
+          <p>{profileError ?? "Profil introuvable."}</p>
+          <button type="button" onClick={() => setActivePage("home")}>
+            Retour au fil
+          </button>
+        </section>
+      );
+    }
+
+    const { profile, activities } = selectedProfile;
+
+    return (
+      <section className="public-profile-page">
+        <button className="detail-back" type="button" onClick={() => setActivePage("home")}>
+          ← Retour au fil
+        </button>
+
+        <header className="public-profile-header">
+          <span aria-hidden="true">{profile.name.charAt(0).toUpperCase()}</span>
+          <div>
+            <p>Membre de Pocket</p>
+            <h1>{profile.name}</h1>
+            <small>
+              Inscrit le {new Intl.DateTimeFormat("fr-FR").format(new Date(profile.createdAt))}
+            </small>
+          </div>
+          <strong>
+            {profile.activityCount} activité{profile.activityCount > 1 ? "s" : ""}
+          </strong>
+        </header>
+
+        <section className="profile-activities" aria-labelledby="profile-activities-title">
+          <header>
+            <h2 id="profile-activities-title">Activités publiques</h2>
+          </header>
+          {activities.length === 0 ? (
+            <p>Ce membre n’a pas encore partagé d’activité.</p>
+          ) : (
+            <ul>
+              {activities.map((activity) => (
+                <li key={activity.id}>
+                  {activity.imageUrl && <img src={activity.imageUrl} alt="" />}
+                  <div>
+                    <h3>{activity.title}</h3>
+                    <p>{activity.description}</p>
+                    <span>
+                      {activity.minAge}–{activity.maxAge} ans · {activity.durationMinutes} min
+                    </span>
+                  </div>
+                  <button type="button" onClick={() => openActivity(activity)}>
+                    Voir
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </section>
+    );
   }
 
   function renderPlanning() {
@@ -534,6 +1241,9 @@ export default function App() {
     if (activePage === "stays") return renderStays();
     if (activePage === "activities") return renderActivities();
     if (activePage === "planning") return renderPlanning();
+    if (activePage === "activityDetail") return renderActivityDetail();
+    if (activePage === "announcementDetail") return renderAnnouncementDetail();
+    if (activePage === "publicProfile") return renderPublicProfile();
     return renderProfile();
   }
 

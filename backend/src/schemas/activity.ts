@@ -27,6 +27,11 @@ export const createActivityBodySchema = z
     locationType: z.enum(["indoor", "outdoor", "both"]),
     energyLevel: z.enum(["low", "medium", "high"]),
 
+    imageUrl: z
+      .union([z.string().trim().url(), z.literal(""), z.null()])
+      .optional()
+      .transform((value) => value || null),
+
     isPublic: z.boolean().default(false),
   })
   .refine((data) => data.maxAge >= data.minAge, {
@@ -38,3 +43,5 @@ export const createActivityBodySchema = z
       "Le nombre maximum d’enfants doit être supérieur ou égal au minimum.",
     path: ["maxChildren"],
   });
+
+export const updateActivityBodySchema = createActivityBodySchema;

@@ -8,8 +8,14 @@ import express, {
 
 import { config } from "./config.js";
 import { query } from "./database.js";
+
+
+// ROUTEURS
+import { postsRouter } from "./routes/posts.js";
 import { activitiesRouter } from "./routes/activities.js";
 import { authRouter } from "./routes/auth.js";
+import { usersRouter } from "./routes/users.js";
+import { commentsRouter } from "./routes/comments.js";
 
 export const app = express();
 
@@ -24,6 +30,10 @@ app.get("/health", async (_request, response) => {
 
 app.use("/auth", authRouter);
 app.use("/activities", activitiesRouter);
+app.use("/posts", postsRouter);
+app.use("/users", usersRouter);
+app.use("/comments", commentsRouter);
+
 
 app.use((_request, response) => {
   response.status(404).json({ message: "Route introuvable." });

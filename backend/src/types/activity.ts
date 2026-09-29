@@ -1,8 +1,6 @@
 export interface Activity {
   id: string;
-  isOwned: boolean;
   ownerId: string;
-  ownerName: string;
   title: string;
   description: string;
   minAge: number;
@@ -12,7 +10,6 @@ export interface Activity {
   durationMinutes: number;
   locationType: "indoor" | "outdoor" | "both";
   energyLevel: "low" | "medium" | "high";
-  imageUrl: string | null;
   isPublic: boolean;
   createdAt: string;
   updatedAt: string;
@@ -28,6 +25,5 @@ export interface CreateActivityInput {
   durationMinutes: number;
   locationType: "indoor" | "outdoor" | "both";
   energyLevel: "low" | "medium" | "high";
-  imageUrl: string | null;
   isPublic: boolean;
 }
