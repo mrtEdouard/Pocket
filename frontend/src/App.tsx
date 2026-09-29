@@ -11,12 +11,93 @@ interface NavigationItem {
   label: string;
 }
 
+interface HomePost {
+  author: string;
+  body: string;
+  category: string;
+  facts: string[];
+  id: number;
+  image: string;
+  imageAlt: string;
+  initials: string;
+  meta: string;
+  stats: string;
+  target: PageId;
+  title: string;
+  tone: "activity" | "recruitment" | "stay";
+}
+
+interface DemoPerson {
+  name: string;
+  picture: string;
+}
+
+interface RandomUserResponse {
+  results: Array<{
+    name: {
+      first: string;
+      last: string;
+    };
+    picture: {
+      large: string;
+    };
+  }>;
+}
+
 const navigationItems: NavigationItem[] = [
   { id: "home", label: "Accueil" },
   { id: "stays", label: "Séjours" },
   { id: "activities", label: "Activités" },
   { id: "planning", label: "Planning" },
   { id: "profile", label: "Profil" },
+];
+
+const homePosts: HomePost[] = [
+  {
+    id: 1,
+    author: "Lina Morel",
+    initials: "LM",
+    meta: "Animatrice · Lyon · 4 h",
+    category: "Activité",
+    tone: "activity",
+    title: "L'affaire des couleurs",
+    image: "https://images.pexels.com/photos/8033799/pexels-photo-8033799.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    imageAlt: "Activité de groupe en extérieur",
+    body: "Testé hier avec 24 enfants. Prévoir plus de ficelle.",
+    facts: ["8–10 ans", "1 h", "Extérieur"],
+    stats: "28 favoris · 5 commentaires",
+    target: "activities",
+  },
+  {
+    id: 2,
+    author: "Thomas Rey",
+    initials: "TR",
+    meta: "Directeur · Saint-Étienne · 6 h",
+    category: "Annonce",
+    tone: "recruitment",
+    title: "Recherche SB — Vercors",
+    image: "https://images.pexels.com/photos/17079655/pexels-photo-17079655.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    imageAlt: "Campement installé en montagne",
+    body: "Du 4 au 16 août avec un groupe de 12 à 17 ans. Logement sur place.",
+    facts: ["12–17 ans", "4–16 août", "Vercors"],
+    stats: "12 intéressés · 3 réponses",
+    target: "stays",
+  },
+  {
+    id: 3,
+    author: "Élise Duarte",
+    initials: "ED",
+    meta: "Directrice · Marseille · hier",
+    category: "Séjour",
+    tone: "stay",
+    title: "Cassis · départ dans 7 jours",
+    image: "https://images.unsplash.com/photo-1657751471074-028e4e43e717?auto=format&fit=crop&w=1200&q=80",
+    imageAlt: "Calanque près de Cassis",
+    body: "L'équipe est complète. Il reste deux veillées à caler.",
+    facts: ["8–12 ans", "8–21 août", "8 membres"],
+    stats: "34 suivis · 6 idées",
+    target: "stays",
+  },
 ];
 
 function NavigationIcon({ page }: { page: PageId }) {
@@ -84,6 +165,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
+  const [demoPeople, setDemoPeople] = useState<DemoPerson[]>([]);
 
   useEffect(() => {
     let effectIsActive = true;
@@ -115,6 +197,35 @@ export default function App() {
     return () => {
       effectIsActive = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadDemoPeople(): Promise<void> {
+      try {
+        const response = await fetch(
+          "https://randomuser.me/api/1.4/?results=6&nat=fr&inc=name,picture&seed=pocket-home-v1&noinfo",
+          { signal: controller.signal },
+        );
+
+        if (!response.ok) return;
+
+        const data = (await response.json()) as RandomUserResponse;
+        setDemoPeople(
+          data.results.map((person) => ({
+            name: `${person.name.first} ${person.name.last}`,
+            picture: person.picture.large,
+          })),
+        );
+      } catch {
+        if (!controller.signal.aborted) setDemoPeople([]);
+      }
+    }
+
+    void loadDemoPeople();
+
+    return () => controller.abort();
   }, []);
 
   async function handleAuthSubmit(
@@ -169,7 +280,108 @@ export default function App() {
   }
 
   function renderHome() {
-    return null;
+    return (
+      <section className="community-home">
+        <div className="community-layout">
+          <section className="community-feed" aria-labelledby="feed-title">
+            <header className="feed-toolbar">
+              <div>
+                <h1 id="feed-title">Pour vous</h1>
+                <p>Publications récentes</p>
+              </div>
+              {!user && (
+                <button type="button" onClick={() => setActivePage("profile")}>
+                  Participer
+                </button>
+              )}
+            </header>
+
+            {homePosts.map((post, index) => (
+              <article className="feed-entry" key={post.id}>
+                <header className="feed-entry-header">
+                  <div className={`profile-avatar avatar-${post.tone}`} aria-hidden="true">
+                    {demoPeople[index] ? (
+                      <img src={demoPeople[index].picture} alt="" />
+                    ) : (
+                      post.initials
+                    )}
+                  </div>
+                  <div className="feed-author">
+                    <strong>{demoPeople[index]?.name ?? post.author}</strong>
+                    <span>{post.meta}</span>
+                  </div>
+                  <span className="post-category">{post.category}</span>
+                </header>
+
+                <img
+                  className="post-image"
+                  src={post.image}
+                  alt={post.imageAlt}
+                  loading={index === 0 ? "eager" : "lazy"}
+                />
+
+                <div className="feed-entry-content">
+                  <h2>{post.title}</h2>
+                  <p>{post.body}</p>
+                  <ul className="post-facts" aria-label="Informations principales">
+                    {post.facts.map((fact) => (
+                      <li key={fact}>{fact}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <footer className="feed-entry-footer">
+                  <span>{post.stats}</span>
+                  <button type="button" onClick={() => setActivePage(post.target)}>
+                    Voir{post.tone === "activity" ? " l'activité" : ""}
+                  </button>
+                </footer>
+              </article>
+            ))}
+          </section>
+
+          <aside className="community-sidebar" aria-label="À découvrir dans Pocket">
+            <section className="sidebar-section">
+              <header>
+                <h2>Ils recrutent</h2>
+                <p>3 dernières offres · 1 par organisme</p>
+              </header>
+              <ul className="stay-list recruiting-list">
+                <li>
+                  <img src="https://images.pexels.com/photos/17079655/pexels-photo-17079655.jpeg?auto=compress&cs=tinysrgb&w=300" alt="Campement en montagne" loading="lazy" />
+                  <div><strong>Vercors</strong><span>4–16 août · SB</span></div>
+                </li>
+                <li>
+                  <img src="https://images.unsplash.com/photo-1657751471074-028e4e43e717?auto=format&fit=crop&w=300&q=75" alt="Calanque près de Cassis" loading="lazy" />
+                  <div><strong>Colo Cassis</strong><span>8–21 août · Animateur·ice</span></div>
+                </li>
+                <li>
+                  <img src="https://images.pexels.com/photos/15840757/pexels-photo-15840757.jpeg?auto=compress&cs=tinysrgb&w=300" alt="Tentes dans un paysage naturel" loading="lazy" />
+                  <div><strong>Nature et créations</strong><span>3–14 août · AS</span></div>
+                </li>
+              </ul>
+              <button className="sidebar-action" type="button" onClick={() => setActivePage("stays")}>
+                Voir les séjours
+              </button>
+            </section>
+
+            <section className="sidebar-section">
+              <header>
+                <h2>Nouveaux profils</h2>
+              </header>
+              <ul className="member-list">
+                <li><span className="member-initials">{demoPeople[3] ? <img src={demoPeople[3].picture} alt="" /> : "MB"}</span><div><strong>{demoPeople[3]?.name ?? "Manon"}</strong><span>Animatrice · Toulouse</span></div><small>BAFA</small></li>
+                <li><span className="member-initials">{demoPeople[4] ? <img src={demoPeople[4].picture} alt="" /> : "YK"}</span><div><strong>{demoPeople[4]?.name ?? "Yanis"}</strong><span>Animateur · Lille</span></div><small>SB</small></li>
+                <li><span className="member-initials">{demoPeople[5] ? <img src={demoPeople[5].picture} alt="" /> : "CR"}</span><div><strong>{demoPeople[5]?.name ?? "Chloé"}</strong><span>Directrice · Rennes</span></div><small>BAFD</small></li>
+              </ul>
+              <button className="sidebar-action" type="button" onClick={() => setActivePage("profile")}>
+                Rejoindre la communauté
+              </button>
+            </section>
+          </aside>
+        </div>
+      </section>
+    );
   }
 
   function renderStays() {
