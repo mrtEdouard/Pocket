@@ -84,6 +84,22 @@ export function getMyActivities(signal?: AbortSignal): Promise<Activity[]> {
   return getActivitiesFrom("/activities/mine", signal);
 }
 
+export async function getActivity(
+  id: string,
+  signal?: AbortSignal,
+): Promise<Activity> {
+  const response = await fetch(`${API_URL}/activities/${id}`, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+    signal,
+  });
+
+  if (!response.ok) throw new Error(await getErrorMessage(response));
+
+  const activity = (await response.json()) as ActivityApiResponse;
+  return mapActivity(activity);
+}
+
 export async function createActivity(
   input: CreateActivityInput,
 ): Promise<Activity> {

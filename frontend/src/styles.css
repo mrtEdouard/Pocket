@@ -95,6 +95,7 @@ button:disabled {
   cursor: pointer;
   padding: 0;
   text-align: left;
+  text-decoration: none;
 }
 
 .wordmark-symbol {
@@ -168,6 +169,7 @@ button:disabled {
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .session-dot {
@@ -212,6 +214,7 @@ button:disabled {
   padding: 3px 1px;
   font-size: 0.65rem;
   font-weight: 800;
+  text-decoration: none;
 }
 
 .nav-icon {

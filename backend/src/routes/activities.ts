@@ -87,7 +87,10 @@ activitiesRouter.get("/:id", async (request, response) => {
   const { id } = validation.data;
 
   const dbResult = await query(
-    "SELECT * FROM activities WHERE id = $1",
+    `SELECT activities.*, users.name AS owner_name, FALSE AS is_owned
+     FROM activities
+     JOIN users ON users.id = activities.owner_id
+     WHERE activities.id = $1`,
     [id],
   );
 
