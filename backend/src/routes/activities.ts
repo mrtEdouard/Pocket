@@ -6,7 +6,7 @@ import {
   activityOwnerIdParamsSchema,
   createActivityBodySchema,
 } from "../schemas/activity.js";
-
+import { authenticate } from "../middleware/authenticate.js";
 export const activitiesRouter = Router();
 
 
@@ -70,50 +70,65 @@ activitiesRouter.get("/:id", async (request, response) => {
 });
 
 // POST : Crée une activité
-activitiesRouter.post("/", async (request, response) => {
-    const validation = createActivityBodySchema.safeParse(request.body);
+// POST : Crée une activité pour l'utilisateur connecté
+activitiesRouter.post("/", authenticate, async (request, response) => {
+  const userId = request.auth?.userId;
 
-    if (!validation.success){
-        response.status(400).json({
-            message: "Données invalides.",
-            errors: validation.error.issues,
-        })
-        return;
-    }
+  if (!userId) {
+    response.status(401).json({
+      message: "Authentification requise.",
+    });
+    return;
+  }
 
-    const activityData = validation.data;
+  const validation = createActivityBodySchema.safeParse(request.body);
 
-    const dbResult = await query(
-  `INSERT INTO activities (
-    owner_id,
-    title,
-    description,
-    min_age,
-    max_age,
-    min_children,
-    max_children,
-    duration_minutes,
-    location_type,
-    energy_level,
-    is_public
-  )
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-  RETURNING *`,
-  [
-    activityData.ownerId,
-    activityData.title,
-    activityData.description,
-    activityData.minAge,
-    activityData.maxAge,
-    activityData.minChildren,
-    activityData.maxChildren,
-    activityData.durationMinutes,
-    activityData.locationType,
-    activityData.energyLevel,
-    activityData.isPublic,
-  ],
-);
-    const createdActivity = dbResult.rows[0];
+  if (!validation.success) {
+    response.status(400).json({
+      message: "Données invalides.",
+      errors: validation.error.issues,
+    });
+    return;
+  }
 
-    response.status(201).json(createdActivity);
-})
+  const activityData = validation.data;
+
+  const dbResult = await query(
+    `INSERT INTO activities (
+      owner_id,
+      title,
+      description,
+      min_age,
+      max_age,
+      min_children,
+      max_children,
+      duration_minutes,
+      location_type,
+      energy_level,
+      is_public
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    RETURNING *`,
+    [
+      userId,
+      activityData.title,
+      activityData.description,
+      activityData.minAge,
+      activityData.maxAge,
+      activityData.minChildren,
+      activityData.maxChildren,
+      activityData.durationMinutes,
+      activityData.locationType,
+      activityData.energyLevel,
+      activityData.isPublic,
+    ],
+  );
+
+  const createdActivity = dbResult.rows[0];
+
+  if (!createdActivity) {
+    throw new Error("L’activité créée n’a pas été retournée.");
+  }
+
+  response.status(201).json(createdActivity);
+});
