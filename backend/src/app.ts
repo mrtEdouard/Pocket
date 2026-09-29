@@ -1,4 +1,5 @@
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import express, {
   type NextFunction,
   type Request,
@@ -7,26 +8,22 @@ import express, {
 
 import { config } from "./config.js";
 import { query } from "./database.js";
-
-
 import { activitiesRouter } from "./routes/activities.js";
-
+import { authRouter } from "./routes/auth.js";
 
 export const app = express();
 
-app.use(cors({ origin: config.corsOrigin }));
+app.use(cors({ origin: config.corsOrigin, credentials: true }));
 app.use(express.json({ limit: "100kb" }));
+app.use(cookieParser());
 
 app.get("/health", async (_request, response) => {
   await query("SELECT 1");
   response.json({ status: "ok" });
 });
 
-
+app.use("/auth", authRouter);
 app.use("/activities", activitiesRouter);
-
-
-
 
 app.use((_request, response) => {
   response.status(404).json({ message: "Route introuvable." });
@@ -48,6 +45,3 @@ app.use(
     response.status(500).json({ message: "Erreur interne du serveur." });
   },
 );
-
-
-
