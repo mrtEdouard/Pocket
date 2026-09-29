@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 
 import { getMyActivities, saveActivity } from "./api/activities";
-import { getCurrentUser } from "./api/auth";
+import { getCurrentUser, logout } from "./api/auth";
 import { AppLayout } from "./components/AppLayout";
 import { ActivitiesPage } from "./pages/ActivitiesPage";
 import { ActivityDetailPage } from "./pages/ActivityDetailPage";
@@ -23,6 +23,8 @@ export default function App() {
   const [isLoadingMyActivities, setIsLoadingMyActivities] = useState(false);
   const [activitiesError, setActivitiesError] = useState<string | null>(null);
   const [savingActivityIds, setSavingActivityIds] = useState<string[]>([]);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   useEffect(() => {
     let effectIsActive = true;
@@ -126,8 +128,33 @@ export default function App() {
     });
   }
 
+  async function handleLogout(): Promise<void> {
+    setLogoutError(null);
+    setIsLoggingOut(true);
+
+    try {
+      await logout();
+      setUser(null);
+      navigate("/");
+    } catch (caughtError) {
+      setLogoutError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "La déconnexion a échoué.",
+      );
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
+
   return (
-    <AppLayout isCheckingSession={isCheckingSession} user={user}>
+    <AppLayout
+      isCheckingSession={isCheckingSession}
+      isLoggingOut={isLoggingOut}
+      logoutError={logoutError}
+      onLogout={handleLogout}
+      user={user}
+    >
       <Routes>
         <Route
           path="/"

@@ -172,6 +172,52 @@ button:disabled {
   text-decoration: none;
 }
 
+.header-account-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.header-notifications,
+.header-logout {
+  display: inline-flex;
+  width: 36px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--night);
+  cursor: pointer;
+}
+
+.header-notifications svg,
+.header-logout svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.header-notifications:hover,
+.header-logout:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.header-session-error {
+  width: min(1180px, calc(100% - 28px));
+  margin: -5px auto 8px;
+  color: #8b2717;
+  font-size: 0.7rem;
+  text-align: right;
+}
+
 .session-dot {
   width: 9px;
   height: 9px;
@@ -1101,6 +1147,49 @@ button.member-initials {
   padding: 0;
 }
 
+.notifications-modal {
+  width: min(440px, calc(100% - 24px));
+  min-height: 230px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--night);
+  padding: 0;
+}
+
+.notifications-modal::backdrop {
+  background: rgba(10, 25, 48, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.notifications-modal > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 17px 18px;
+}
+
+.notifications-modal h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.notifications-modal header button {
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 0 3px;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.notifications-modal-body {
+  min-height: 174px;
+}
+
 .activity-modal::backdrop {
   background: rgba(10, 25, 48, 0.55);
   backdrop-filter: blur(2px);
@@ -1830,7 +1919,7 @@ button.member-initials {
   }
 
   .profile-sheet {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
   .activity-form {
@@ -1878,9 +1967,6 @@ button.member-initials {
     grid-column: auto;
   }
 
-  .text-action {
-    justify-self: end;
-  }
 }
 
 @media (min-width: 1024px) {
@@ -1969,5 +2055,315 @@ button.member-initials {
       color 140ms ease,
       box-shadow 140ms ease,
       transform 140ms ease;
+  }
+}
+
+
+
+
+/* -------------------------------------------------------------------------- */
+/* Profil social                                                              */
+/* -------------------------------------------------------------------------- */
+
+.social-profile {
+  width: min(1000px, 100%);
+  margin: 0 auto;
+  color: var(--night);
+}
+
+.social-profile-header {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  padding: 4px 0 28px;
+}
+
+.social-profile-avatar {
+  width: 96px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 2px solid var(--night);
+  border-radius: 50%;
+  background: var(--paper);
+  padding: 4px;
+}
+
+.social-profile-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.social-profile-main {
+  min-width: 0;
+}
+
+.social-profile-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.social-profile-heading h1 {
+  margin: 0;
+  font-size: clamp(1.35rem, 5vw, 1.9rem);
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+}
+
+.social-profile-heading button {
+  border: 1px solid var(--night);
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--night);
+  cursor: pointer;
+  padding: 7px 11px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.social-profile-heading button:hover {
+  background: var(--night);
+  color: var(--paper);
+}
+
+.social-profile-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 20px 0;
+}
+
+.social-profile-stats div {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.social-profile-stats dt {
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+}
+
+.social-profile-stats dd {
+  order: -1;
+  margin: 0;
+  color: var(--night);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.social-profile-bio {
+  display: grid;
+  gap: 5px;
+}
+
+.social-profile-bio strong {
+  font-size: 0.76rem;
+}
+
+.social-profile-bio p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+/* Onglets */
+
+.social-profile-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.social-profile-tabs button {
+  position: relative;
+  min-height: 54px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 8px 5px;
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.social-profile-tabs button::after {
+  position: absolute;
+  right: 25%;
+  bottom: -1px;
+  left: 25%;
+  height: 2px;
+  background: transparent;
+  content: "";
+}
+
+.social-profile-tabs button:hover {
+  color: var(--night);
+}
+
+.social-profile-tabs button[aria-selected="true"] {
+  color: var(--night);
+}
+
+.social-profile-tabs button[aria-selected="true"]::after {
+  background: var(--blue);
+}
+
+/* Grille de publications */
+
+.social-profile-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding-top: 4px;
+}
+
+.social-profile-gallery button {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--line);
+  cursor: pointer;
+  padding: 0;
+}
+
+.social-profile-gallery img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition:
+    transform 180ms ease,
+    filter 180ms ease;
+}
+
+.social-profile-gallery button:hover img {
+  filter: brightness(0.88);
+  transform: scale(1.025);
+}
+
+.social-profile-gallery button:focus-visible {
+  z-index: 2;
+  outline-offset: -4px;
+}
+
+/* Tablette et ordinateur */
+
+@media (min-width: 700px) {
+  .social-profile-header {
+    grid-template-columns: 180px minmax(0, 1fr);
+    align-items: center;
+    gap: 52px;
+    padding: 10px 42px 34px;
+  }
+
+  .social-profile-avatar {
+    width: 180px;
+    padding: 5px;
+  }
+
+  .social-profile-heading {
+    gap: 16px;
+  }
+
+  .social-profile-heading button {
+    padding: 8px 14px;
+    font-size: 0.72rem;
+  }
+
+  .social-profile-stats {
+    gap: 32px;
+  }
+
+  .social-profile-stats dt {
+    font-size: 0.78rem;
+  }
+
+  .social-profile-stats dd {
+    font-size: 1rem;
+  }
+
+  .social-profile-bio strong,
+  .social-profile-bio p {
+    font-size: 0.8rem;
+  }
+
+  .social-profile-gallery {
+    gap: 10px;
+    padding-top: 12px;
+  }
+
+  .social-profile-gallery button {
+    border-radius: 5px;
+  }
+}
+
+/* Très petits écrans */
+
+@media (max-width: 430px) {
+  .social-profile-header {
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .social-profile-avatar {
+    width: 78px;
+    padding: 3px;
+  }
+
+  .social-profile-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .social-profile-heading h1 {
+    font-size: 1.2rem;
+  }
+
+  .social-profile-heading button {
+    padding: 6px 9px;
+    font-size: 0.62rem;
+  }
+
+  .social-profile-stats {
+    justify-content: space-between;
+    gap: 7px;
+    margin: 15px 0;
+  }
+
+  .social-profile-stats div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .social-profile-stats dd {
+    order: initial;
+  }
+
+  .social-profile-tabs button {
+    min-height: 48px;
+    font-size: 0.55rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .social-profile-gallery img {
+    transition: none;
   }
 }

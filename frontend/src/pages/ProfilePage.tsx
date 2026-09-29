@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from "react";
 
-import { login, logout, register } from "../api/auth";
+import { login, register } from "../api/auth";
 import type { User } from "../types/user";
+
+import { ProfileView } from "../components/profile/ProfileView";
+
 
 type AuthMode = "login" | "register";
 
@@ -52,54 +55,15 @@ export function ProfilePage({
     }
   }
 
-  async function handleLogout(): Promise<void> {
-    setError(null);
-    setIsSubmitting(true);
-
-    try {
-      await logout();
-      onUserChange(null);
-      setPassword("");
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "La déconnexion a échoué.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   if (isCheckingSession) {
     return <p className="session-check" role="status">Vérification de la session…</p>;
   }
 
-  if (user) {
-    return (
-      <section className="profile-sheet" aria-labelledby="profile-name">
-        <div className="profile-initial" aria-hidden="true">
-          {user.name.charAt(0).toUpperCase()}
-        </div>
-        <div className="profile-identity">
-          <p>Compte actif</p>
-          <h2 id="profile-name">{user.name}</h2>
-          <a href={`mailto:${user.email}`}>{user.email}</a>
-        </div>
-        <button
-          className="text-action"
-          type="button"
-          disabled={isSubmitting}
-          onClick={() => void handleLogout()}
-        >
-          {isSubmitting ? "Déconnexion…" : "Se déconnecter"}
-        </button>
-        {error && <p className="form-error profile-error" role="alert">{error}</p>}
-      </section>
-    );
-  }
+  if (user) { // Si le user est connecté 
+  return <ProfileView user={user} />;
+}
 
-  return (
+  return ( // Si pas connecté, on le fait se connecter
     <section className="auth-workbench" aria-labelledby="auth-title">
       <div className="auth-copy">
         <p className="auth-stamp">Bienvenue dans l'équipe</p>

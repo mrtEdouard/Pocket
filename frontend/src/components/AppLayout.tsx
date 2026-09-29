@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { NavLink, type NavLinkRenderProps } from "react-router-dom";
 
 import type { User } from "../types/user";
+import { NotificationsModal } from "./NotificationsModal";
 
 type MainPageId = "home" | "stays" | "activities" | "planning" | "profile";
 
@@ -13,6 +15,9 @@ interface NavigationItem {
 interface AppLayoutProps {
   children: React.ReactNode;
   isCheckingSession: boolean;
+  isLoggingOut: boolean;
+  logoutError: string | null;
+  onLogout: () => Promise<void>;
   user: User | null;
 }
 
@@ -83,7 +88,16 @@ function navClassName(_props: NavLinkRenderProps): string {
   return "nav-item";
 }
 
-export function AppLayout({ children, isCheckingSession, user }: AppLayoutProps) {
+export function AppLayout({
+  children,
+  isCheckingSession,
+  isLoggingOut,
+  logoutError,
+  onLogout,
+  user,
+}: AppLayoutProps) {
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
   return (
     <div className="app-shell">
       <header className="site-header">
@@ -116,12 +130,53 @@ export function AppLayout({ children, isCheckingSession, user }: AppLayoutProps)
             ))}
           </nav>
 
-          <NavLink className="session-link" to="/profil">
-            <span className={user ? "session-dot is-online" : "session-dot"} />
-            {isCheckingSession ? "Session…" : user?.name ?? "Connexion"}
-          </NavLink>
+          <div className="header-account-actions">
+            {user && (
+              <button
+                className="header-notifications"
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={isNotificationsOpen}
+                aria-label="Ouvrir les notifications"
+                onClick={() => setIsNotificationsOpen(true)}
+                title="Notifications"
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2.5 6 2.5 7.5H4c0-1.5 2.5-1.5 2.5-7.5ZM10 20h4" />
+                </svg>
+              </button>
+            )}
+
+            <NavLink className="session-link" to="/profil">
+              <span className={user ? "session-dot is-online" : "session-dot"} />
+              {isCheckingSession ? "Session…" : user?.name ?? "Connexion"}
+            </NavLink>
+
+            {user && (
+              <button
+                className="header-logout"
+                type="button"
+                disabled={isLoggingOut}
+                aria-label={isLoggingOut ? "Déconnexion en cours" : "Se déconnecter"}
+                onClick={() => {
+                  setIsNotificationsOpen(false);
+                  void onLogout();
+                }}
+                title="Se déconnecter"
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
+        {logoutError && <p className="header-session-error" role="alert">{logoutError}</p>}
       </header>
+
+      {user && isNotificationsOpen && (
+        <NotificationsModal onClose={() => setIsNotificationsOpen(false)} />
+      )}
 
       <main className="app-content">{children}</main>
     </div>
