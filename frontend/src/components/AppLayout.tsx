@@ -147,10 +147,7 @@ export function AppLayout({
               </button>
             )}
 
-            <NavLink className="session-link" to="/profil">
-              <span className={user ? "session-dot is-online" : "session-dot"} />
-              {isCheckingSession ? "Session…" : user?.name ?? "Connexion"}
-            </NavLink>
+
 
             {user && (
               <button

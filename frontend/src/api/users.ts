@@ -13,6 +13,7 @@ interface ApiError {
 interface PublicProfileResponse {
   profile: PublicUser;
   activities: ActivityApiResponse[];
+  savedActivities: ActivityApiResponse[]; // Sauvegarde les activités dont il n'est pas le créateur
 }
 
 async function getErrorMessage(response: Response): Promise<string> {
@@ -35,7 +36,11 @@ export async function getRecentUsers(
 export async function getPublicProfile(
   id: string,
   signal?: AbortSignal,
-): Promise<{ profile: PublicUser; activities: Activity[] }> {
+): Promise<{
+  profile: PublicUser;
+  activities: Activity[];
+  savedActivities: Activity[];
+}> {
   const response = await fetch(`${API_URL}/users/${id}`, {
     headers: { Accept: "application/json" },
     signal,
@@ -47,5 +52,6 @@ export async function getPublicProfile(
   return {
     profile: data.profile,
     activities: data.activities.map(mapActivity),
+    savedActivities: data.savedActivities.map(mapActivity),
   };
 }

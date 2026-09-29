@@ -69,5 +69,25 @@ usersRouter.get("/:id", async (request, response) => {
     [id],
   );
 
-  response.json({ profile, activities: activitiesResult.rows });
+  const savedActivitiesResult = await query(
+    `SELECT activities.*,
+            owners.name AS owner_name,
+            FALSE AS is_owned
+     FROM saved_activities
+     JOIN activities
+       ON activities.id = saved_activities.activity_id
+     JOIN users AS owners
+       ON owners.id = activities.owner_id
+     WHERE saved_activities.user_id = $1
+       AND activities.owner_id <> $1
+       AND activities.is_public = TRUE
+     ORDER BY saved_activities.saved_at DESC`,
+    [id],
+  );
+
+  response.json({
+    profile,
+    activities: activitiesResult.rows,
+    savedActivities: savedActivitiesResult.rows,
+  });
 });

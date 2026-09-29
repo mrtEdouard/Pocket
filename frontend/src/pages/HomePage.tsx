@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { getPublicActivities } from "../api/activities";
 import { getRecentUsers } from "../api/users";
 import { energyLabels, locationLabels } from "../data/activityLabels";
-import { homePosts } from "../data/home";
+import { recruitmentAnnouncements } from "../data/recruitmentAnnouncements";
 import type { Activity } from "../types/activity";
 import type { PublicUser, User } from "../types/user";
 
@@ -179,45 +179,47 @@ export function HomePage({
             );
           })}
 
-          {homePosts.map((post, index) => (
-            <article className="feed-entry" key={post.id}>
+          {recruitmentAnnouncements.map((announcement, index) => (
+            <article className="feed-entry" key={`recruitment-${announcement.id}`}>
               <header className="feed-entry-header">
-                <div className={`profile-avatar avatar-${post.tone}`} aria-hidden="true">
+                <div className="profile-avatar avatar-recruitment" aria-hidden="true">
                   {demoPeople[index] ? (
                     <img src={demoPeople[index].picture} alt="" />
                   ) : (
-                    post.initials
+                    announcement.authorInitials
                   )}
                 </div>
                 <div className="feed-author">
-                  <strong>{demoPeople[index]?.name ?? post.author}</strong>
-                  <span>{post.meta}</span>
+                  <strong>{demoPeople[index]?.name ?? announcement.authorName}</strong>
+                  <span>{announcement.authorMeta}</span>
                 </div>
-                <span className="post-category">{post.category}</span>
+                <span className="post-category">Recrutement</span>
               </header>
 
               <img
                 className="post-image"
-                src={post.image}
-                alt={post.imageAlt}
+                src={announcement.imageUrl}
+                alt={announcement.imageAlt}
                 loading={index === 0 ? "eager" : "lazy"}
               />
 
               <div className="feed-entry-content">
-                <h2>{post.title}</h2>
-                <p>{post.body}</p>
+                <h2>{announcement.title}</h2>
+                <p>{announcement.description}</p>
                 <ul className="post-facts" aria-label="Informations principales">
-                  {post.facts.map((fact) => <li key={fact}>{fact}</li>)}
+                  <li>{announcement.role}</li>
+                  <li>{announcement.dateRange}</li>
+                  <li>{announcement.location}</li>
                 </ul>
               </div>
 
               <footer className="feed-entry-footer">
-                <span>{post.stats}</span>
+                <span>{announcement.stats}</span>
                 <button
                   type="button"
-                  onClick={() => navigate(`/publications/${post.id}`)}
+                  onClick={() => navigate(`/annonces/${announcement.id}`)}
                 >
-                  Voir la publication
+                  Voir l’annonce
                 </button>
               </footer>
             </article>
@@ -230,23 +232,17 @@ export function HomePage({
               <h2>Ils recrutent</h2>
               <p>3 dernières offres · 1 par organisme</p>
             </header>
-            <ul className="stay-list recruiting-list">
-              <li>
-                <img src="https://images.pexels.com/photos/17079655/pexels-photo-17079655.jpeg?auto=compress&cs=tinysrgb&w=300" alt="Campement en montagne" loading="lazy" />
-                <div><strong>Vercors</strong><span>4–16 août · SB</span></div>
-              </li>
-              <li>
-                <img src="https://images.unsplash.com/photo-1657751471074-028e4e43e717?auto=format&fit=crop&w=300&q=75" alt="Calanque près de Cassis" loading="lazy" />
-                <div><strong>Colo Cassis</strong><span>8–21 août · Animateur·ice</span></div>
-              </li>
-              <li>
-                <img src="https://images.pexels.com/photos/15840757/pexels-photo-15840757.jpeg?auto=compress&cs=tinysrgb&w=300" alt="Tentes dans un paysage naturel" loading="lazy" />
-                <div><strong>Nature et créations</strong><span>3–14 août · AS</span></div>
-              </li>
+            <ul className="recruitment-list">
+              {recruitmentAnnouncements.slice(0, 3).map((announcement) => (
+                <li key={`sidebar-${announcement.id}`}>
+                  <img src={announcement.imageUrl} alt="" loading="lazy" />
+                  <div>
+                    <strong>{announcement.location}</strong>
+                    <span>{announcement.dateRange} · {announcement.role}</span>
+                  </div>
+                </li>
+              ))}
             </ul>
-            <button className="sidebar-action" type="button" onClick={() => navigate("/sejours")}>
-              Voir les séjours
-            </button>
           </section>
 
           <section className="sidebar-section">

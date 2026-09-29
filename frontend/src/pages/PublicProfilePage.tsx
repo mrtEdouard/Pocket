@@ -2,12 +2,25 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { getPublicProfile } from "../api/users";
+import {
+  ProfileView,
+  type ProfileActivityPreview,
+} from "../components/profile/ProfileView";
 import type { Activity } from "../types/activity";
 import type { PublicUser } from "../types/user";
 
 interface PublicProfileData {
   activities: Activity[];
   profile: PublicUser;
+  savedActivities: Activity[];
+}
+
+function toProfilePreview(activity: Activity): ProfileActivityPreview {
+  return {
+    id: activity.id,
+    imageUrl: activity.imageUrl,
+    title: activity.title,
+  };
 }
 
 export function PublicProfilePage() {
@@ -58,50 +71,21 @@ export function PublicProfilePage() {
     );
   }
 
-  const { profile, activities } = data;
+  const { profile, activities, savedActivities } = data;
+  const memberSince = new Intl.DateTimeFormat("fr-FR", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(profile.createdAt));
 
   return (
-    <section className="public-profile-page">
-      <button className="detail-back" type="button" onClick={() => navigate("/")}>
-        ← Retour au fil
-      </button>
-
-      <header className="public-profile-header">
-        <span aria-hidden="true">{profile.name.charAt(0).toUpperCase()}</span>
-        <div>
-          <p>Membre de Pocket</p>
-          <h1>{profile.name}</h1>
-          <small>
-            Inscrit le {new Intl.DateTimeFormat("fr-FR").format(new Date(profile.createdAt))}
-          </small>
-        </div>
-        <strong>
-          {profile.activityCount} activité{profile.activityCount > 1 ? "s" : ""}
-        </strong>
-      </header>
-
-      <section className="profile-activities" aria-labelledby="profile-activities-title">
-        <header><h2 id="profile-activities-title">Activités publiques</h2></header>
-        {activities.length === 0 ? (
-          <p>Ce membre n’a pas encore partagé d’activité.</p>
-        ) : (
-          <ul>
-            {activities.map((activity) => (
-              <li key={activity.id}>
-                {activity.imageUrl && <img src={activity.imageUrl} alt="" />}
-                <div>
-                  <h3>{activity.title}</h3>
-                  <p>{activity.description}</p>
-                  <span>{activity.minAge}–{activity.maxAge} ans · {activity.durationMinutes} min</span>
-                </div>
-                <button type="button" onClick={() => navigate(`/activites/${activity.id}`)}>
-                  Voir
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </section>
+    <ProfileView
+      activities={activities.map(toProfilePreview)}
+      bio={`Membre de Pocket depuis ${memberSince}.`}
+      name={profile.name}
+      onActivityClick={(activityId) => navigate(`/activites/${activityId}`)}
+      publishedActivities={activities.map(toProfilePreview)}
+      role="Membre Pocket"
+      savedActivities={savedActivities.map(toProfilePreview)}
+    />
   );
 }

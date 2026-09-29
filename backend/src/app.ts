@@ -11,7 +11,6 @@ import { query } from "./database.js";
 
 
 // ROUTEURS
-import { postsRouter } from "./routes/posts.js";
 import { activitiesRouter } from "./routes/activities.js";
 import { authRouter } from "./routes/auth.js";
 import { usersRouter } from "./routes/users.js";
@@ -30,7 +29,6 @@ app.get("/health", async (_request, response) => {
 
 app.use("/auth", authRouter);
 app.use("/activities", activitiesRouter);
-app.use("/posts", postsRouter);
 app.use("/users", usersRouter);
 app.use("/comments", commentsRouter);
 

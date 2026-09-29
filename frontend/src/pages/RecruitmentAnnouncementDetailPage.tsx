@@ -1,18 +1,20 @@
 import { useNavigate, useParams } from "react-router-dom";
 
 import { CommentsSection } from "../components/CommentsSection";
-import { homePosts } from "../data/home";
+import { recruitmentAnnouncements } from "../data/recruitmentAnnouncements";
 import type { User } from "../types/user";
 
-export function AnnouncementDetailPage({ user }: { user: User | null }) {
+export function RecruitmentAnnouncementDetailPage({ user }: { user: User | null }) {
   const navigate = useNavigate();
-  const { postId } = useParams();
-  const post = homePosts.find((homePost) => String(homePost.id) === postId);
+  const { announcementId } = useParams();
+  const announcement = recruitmentAnnouncements.find(
+    (candidate) => candidate.id === announcementId,
+  );
 
-  if (!post) {
+  if (!announcement) {
     return (
       <section className="public-profile-error">
-        <p>Publication introuvable.</p>
+        <p>Annonce de recrutement introuvable.</p>
         <button type="button" onClick={() => navigate("/")}>Retour au fil</button>
       </section>
     );
@@ -26,30 +28,37 @@ export function AnnouncementDetailPage({ user }: { user: User | null }) {
 
       <article className="detail-card">
         <header className="detail-author">
-          <span className={`profile-avatar avatar-${post.tone}`} aria-hidden="true">
-            {post.initials}
+          <span className="profile-avatar avatar-recruitment" aria-hidden="true">
+            {announcement.authorInitials}
           </span>
           <div>
-            <strong>{post.author}</strong>
-            <span>{post.meta}</span>
+            <strong>{announcement.authorName}</strong>
+            <span>{announcement.authorMeta}</span>
           </div>
-          <small>{post.category}</small>
+          <small>Recrutement</small>
         </header>
 
-        <img className="detail-cover" src={post.image} alt={post.imageAlt} />
+        <img
+          className="detail-cover"
+          src={announcement.imageUrl}
+          alt={announcement.imageAlt}
+        />
 
         <div className="detail-content">
-          <h1>{post.title}</h1>
-          <p>{post.body}</p>
+          <h1>{announcement.title}</h1>
+          <p>{announcement.description}</p>
           <ul className="post-facts" aria-label="Informations principales">
-            {post.facts.map((fact) => <li key={fact}>{fact}</li>)}
+            <li>{announcement.role}</li>
+            <li>{announcement.ageGroup}</li>
+            <li>{announcement.dateRange}</li>
+            <li>{announcement.location}</li>
           </ul>
         </div>
       </article>
 
       <CommentsSection
         currentUser={user}
-        targetId={`feed-${post.id}`}
+        targetId={`recruitment-${announcement.id}`}
         targetType="announcement"
         onAuthorClick={(authorId) => navigate(`/utilisateurs/${authorId}`)}
         onLoginRequired={() => navigate("/profil")}

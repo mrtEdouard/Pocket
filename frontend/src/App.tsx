@@ -6,7 +6,7 @@ import { getCurrentUser, logout } from "./api/auth";
 import { AppLayout } from "./components/AppLayout";
 import { ActivitiesPage } from "./pages/ActivitiesPage";
 import { ActivityDetailPage } from "./pages/ActivityDetailPage";
-import { AnnouncementDetailPage } from "./pages/AnnouncementDetailPage";
+import { RecruitmentAnnouncementDetailPage } from "./pages/RecruitmentAnnouncementDetailPage";
 import { HomePage } from "./pages/HomePage";
 import { PlanningPage } from "./pages/PlanningPage";
 import { ProfilePage } from "./pages/ProfilePage";
@@ -198,14 +198,15 @@ export default function App() {
           element={
             <ProfilePage
               isCheckingSession={isCheckingSession}
+              myActivities={myActivities}
               onUserChange={setUser}
               user={user}
             />
           }
         />
         <Route
-          path="/publications/:postId"
-          element={<AnnouncementDetailPage user={user} />}
+          path="/annonces/:announcementId"
+          element={<RecruitmentAnnouncementDetailPage user={user} />}
         />
         <Route path="/utilisateurs/:userId" element={<PublicProfilePage />} />
         <Route path="*" element={<Navigate replace to="/" />} />

@@ -1,24 +1,38 @@
 import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { login, register } from "../api/auth";
+import {
+  ProfileView,
+  type ProfileActivityPreview,
+} from "../components/profile/ProfileView";
+import type { Activity } from "../types/activity";
 import type { User } from "../types/user";
-
-import { ProfileView } from "../components/profile/ProfileView";
-
 
 type AuthMode = "login" | "register";
 
 interface ProfilePageProps {
   isCheckingSession: boolean;
+  myActivities: Activity[];
   onUserChange: (user: User | null) => void;
   user: User | null;
 }
 
+function toProfilePreview(activity: Activity): ProfileActivityPreview {
+  return {
+    id: activity.id,
+    imageUrl: activity.imageUrl,
+    title: activity.title,
+  };
+}
+
 export function ProfilePage({
   isCheckingSession,
+  myActivities,
   onUserChange,
   user,
 }: ProfilePageProps) {
+  const navigate = useNavigate();
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -59,9 +73,30 @@ export function ProfilePage({
     return <p className="session-check" role="status">Vérification de la session…</p>;
   }
 
-  if (user) { // Si le user est connecté 
-  return <ProfileView user={user} />;
-}
+  if (user) {
+    const createdActivities = myActivities.filter((activity) => activity.isOwned);
+    const publicActivities = createdActivities.filter((activity) => activity.isPublic);
+    const savedActivities = myActivities.filter(
+      (activity) => !activity.isOwned && activity.isPublic,
+    );
+    const memberSince = new Intl.DateTimeFormat("fr-FR", {
+      month: "long",
+      year: "numeric",
+    }).format(new Date(user.createdAt));
+
+    return (
+      <ProfileView
+        activities={createdActivities.map(toProfilePreview)}
+        bio={`Membre de Pocket depuis ${memberSince}.`}
+        isOwnProfile
+        name={user.name}
+        onActivityClick={(activityId) => navigate(`/activites/${activityId}`)}
+        publishedActivities={publicActivities.map(toProfilePreview)}
+        role="Membre Pocket"
+        savedActivities={savedActivities.map(toProfilePreview)}
+      />
+    );
+  }
 
   return ( // Si pas connecté, on le fait se connecter
     <section className="auth-workbench" aria-labelledby="auth-title">

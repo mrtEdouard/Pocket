@@ -1,66 +1,98 @@
 import { useState } from "react";
 
-import { profileMock } from "../../data/profileMock"; // Charge les mocks
-import type { User } from "../../types/user";
+export type ProfileTab = "published" | "activities" | "saved";
 
-type ProfileTab = "posts" | "activities" | "saved";
-
-interface ProfileViewProps {
-  user: User;
+export interface ProfileActivityPreview {
+  id: string;
+  imageUrl: string | null;
+  title: string;
 }
 
-const tabs: Array<{ id: ProfileTab; label: string }> = [ // Sous tab
-  { id: "posts", label: "Publications" },
+interface ProfileViewProps {
+  activities?: ProfileActivityPreview[];
+  avatarUrl?: string | null;
+  bio: string;
+  isOwnProfile?: boolean;
+  name: string;
+  onActivityClick?: (activityId: string) => void;
+  publishedActivities: ProfileActivityPreview[];
+  role: string;
+  savedActivities?: ProfileActivityPreview[];
+}
+
+const tabs: Array<{ id: ProfileTab; label: string }> = [
+  { id: "published", label: "Publiées" },
   { id: "activities", label: "Activités" },
-  { id: "saved", label: "Enregistrés" },
+  { id: "saved", label: "Enregistrées" },
 ];
 
-export function ProfileView({ user }: ProfileViewProps) {
-  const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
+export function ProfileView({
+  activities: activityItems,
+  avatarUrl = null,
+  bio,
+  isOwnProfile = false,
+  name,
+  onActivityClick,
+  publishedActivities,
+  role,
+  savedActivities = [],
+}: ProfileViewProps) {
+  const [activeTab, setActiveTab] = useState<ProfileTab>("published");
+  const activities = activityItems ?? publishedActivities;
+  const displayedActivities = activeTab === "saved"
+    ? savedActivities
+    : activeTab === "activities"
+      ? activities
+      : publishedActivities;
+  const emptyMessage = activeTab === "saved"
+    ? "Aucune activité enregistrée."
+    : activeTab === "activities"
+      ? "Aucune activité pour le moment."
+      : "Aucune activité publiée pour le moment.";
 
   return (
     <section className="social-profile">
       <header className="social-profile-header">
         <div className="social-profile-avatar">
-          <img src={profileMock.avatarUrl} alt={`Photo de ${user.name}`} />
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={`Photo de ${name}`} />
+          ) : (
+            <span aria-hidden="true">{name.charAt(0).toUpperCase()}</span>
+          )}
         </div>
 
         <div className="social-profile-main">
           <div className="social-profile-heading">
-            <h1>{user.name}</h1>
+            <h1>{name}</h1>
 
-            <button type="button">
-              Modifier le profil
-            </button>
+            {isOwnProfile && <button type="button">Modifier le profil</button>}
           </div>
 
           <dl className="social-profile-stats">
             <div>
+              <dt>Publiées</dt>
+              <dd>{publishedActivities.length}</dd>
+            </div>
+
+            <div>
               <dt>Activités</dt>
-              <dd>{profileMock.posts.length}</dd>
+              <dd>{activities.length}</dd>
             </div>
 
             <div>
-              <dt>Séjours</dt>
-              <dd>{profileMock.staysCount}</dd>
-            </div>
-
-            <div>
-              <dt>Favoris</dt>
-              <dd>{profileMock.favoritesCount}</dd>
+              <dt>Enregistrées</dt>
+              <dd>{savedActivities.length}</dd>
             </div>
           </dl>
 
           <div className="social-profile-bio">
-            <strong>
-              {profileMock.role} · {profileMock.city}
-            </strong>
-            <p>{profileMock.bio}</p>
+            <strong>{role}</strong>
+            <p>{bio}</p>
           </div>
         </div>
       </header>
 
-      <nav className="social-profile-tabs" aria-label="Contenu du profil">
+      <nav className="social-profile-tabs" aria-label="Contenu du profil" role="tablist">
         {tabs.map((tab) => (
           <button
             type="button"
@@ -74,13 +106,27 @@ export function ProfileView({ user }: ProfileViewProps) {
         ))}
       </nav>
 
-      <section className="social-profile-gallery">
-        {profileMock.posts.map((post) => (
-          <button type="button" key={post.id}>
-            <img src={post.imageUrl} alt={post.title} />
-            <span className="sr-only">{post.title}</span>
-          </button>
-        ))}
+      <section className="social-profile-gallery" aria-live="polite">
+        {displayedActivities.length === 0 ? (
+          <p className="social-profile-empty">{emptyMessage}</p>
+        ) : (
+          displayedActivities.map((activity) => (
+            <button
+              type="button"
+              key={activity.id}
+              onClick={() => onActivityClick?.(activity.id)}
+            >
+              {activity.imageUrl ? (
+                <img src={activity.imageUrl} alt={activity.title} />
+              ) : (
+                <span className="social-profile-activity-placeholder">
+                  {activity.title}
+                </span>
+              )}
+              <span className="sr-only">Ouvrir {activity.title}</span>
+            </button>
+          ))
+        )}
       </section>
     </section>
   );
